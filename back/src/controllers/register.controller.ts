@@ -1,20 +1,20 @@
-import { Request, Response } from "express";
-import { pgClient } from "../dbConnection";
+import * as EmailValidator from "email-validator";
 import bcrypt from "bcrypt";
 import passwordValidator from "password-validator";
-import * as EmailValidator from "email-validator";
+import { pgClient } from "../dbConnection";
+import { NextFunction, Request, Response } from "express";
 import { User } from "../interfaces/user.interface";
+
 const dbConn = pgClient;
 
-export const RegisterUser = async (req: Request, res: Response) => {
-  var user: User = {
-    name: req.body.name,
-    lastname: req.body.lastname,
-    email: req.body.email,
-    password: req.body.password,
-  };
+export const RegisterUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { email, password, name, lastname } = req.body;
 
-  if (!user) {
+  if (!email || !password || !name || !lastname) {
     res.status(400).json({
       status: "error",
       success: false,
@@ -25,7 +25,7 @@ export const RegisterUser = async (req: Request, res: Response) => {
 
   const userExists = await dbConn.oneOrNone(
     "SELECT * FROM usuarios WHERE email = $1",
-    [user.email]
+    [email]
   );
 
   if (userExists) {
@@ -35,7 +35,7 @@ export const RegisterUser = async (req: Request, res: Response) => {
       message: "El email proporcionado ya ha sido registrado.",
     });
     return;
-  } else if (!EmailValidator.validate(user.email)) {
+  } else if (!EmailValidator.validate(email)) {
     res.status(400).json({
       status: "error",
       success: false,
@@ -56,31 +56,42 @@ export const RegisterUser = async (req: Request, res: Response) => {
       .uppercase()
       .has()
       .lowercase()
-      .validate(user.password) === false
+      .validate(password) === false
   ) {
     res.status(400).json({
       status: "error",
       success: false,
-      message: "La contraseña debe tener al menos 8 caracteres, una letra mayúscula, una letra minúscula y un número.",
+      message:
+        "La contraseña debe tener al menos 8 caracteres, una letra mayúscula, una letra minúscula y un número.",
     });
     return;
   }
 
   const salt = await bcrypt.genSalt(12);
-  const hash = await bcrypt.hash(user.password, salt);
+  const hash = await bcrypt.hash(password, salt);
 
   try {
-    const useInsert = await dbConn.one(
+    const userDb = await dbConn.one(
       "INSERT INTO usuarios (email, contrasena, apellidos, nombre) VALUES ($1, $2, $3, $4) RETURNING *",
-      [user.email, hash, user.lastname, user.name]
+      [email, hash, lastname, name]
     );
-    res.status(201).json({
-      status: "success",
-      success: true,
-      message: "Usuario creado exitosamente.",
-      data: useInsert,
-      redirectTo: "/login",
-    });
+
+    const user: User = {
+      email: userDb.email,
+      name: userDb.nombre,
+      lastname: userDb.apellidos,
+      password: "",
+    };
+
+    res
+      .status(201)
+      .json({
+        status: "success",
+        success: true,
+        message: "Usuario creado exitosamente.",
+        data: user,
+      })
+      .redirect("/login");
   } catch (error: unknown) {
     if (error instanceof Error) {
       res.status(500).json({
