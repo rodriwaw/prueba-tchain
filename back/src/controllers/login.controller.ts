@@ -13,14 +13,14 @@ export const LoginUser = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    res.status(400).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message: "Todos los campos son requeridos.",
     });
     return;
   } else if (!EmailValidator.validate(email)) {
-    res.status(400).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message: "El email proporcionado no es válido.",
@@ -34,7 +34,7 @@ export const LoginUser = async (req: Request, res: Response) => {
   );
 
   if (!userDb) {
-    res.status(404).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message: "El email proporcionado no está registrado.",
@@ -54,7 +54,7 @@ export const LoginUser = async (req: Request, res: Response) => {
   const isMatch = await bcrypt.compare(password, user.password);
 
   if (!isMatch) {
-    res.status(401).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message: "La contraseña proporcionada es incorrecta.",
@@ -64,18 +64,14 @@ export const LoginUser = async (req: Request, res: Response) => {
 
   user.password = "";
 
-  const token = jwt.sign(user, process.env.TOKEN_SECRET ?? "secret", {
+  const token = jwt.sign(user, process.env.TOKEN_SECRET!, {
     expiresIn: "24h",
   });
 
-  res
-    .status(200)
-    .json({
-      status: "success",
-      success: true,
-      message: "Inicio de sesión exitoso.",
-      token,
-    })
-    .setHeader("Authorization", `Bearer ${token}`)
-    .redirect("/dashboard");
+  res.status(200).json({
+    status: "success",
+    success: true,
+    message: "Inicio de sesión exitoso.",
+    token,
+  });
 };

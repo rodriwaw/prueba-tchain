@@ -15,7 +15,7 @@ export const RegisterUser = async (
   const { email, password, name, lastname } = req.body;
 
   if (!email || !password || !name || !lastname) {
-    res.status(400).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message: "Todos los campos son requeridos.",
@@ -29,14 +29,14 @@ export const RegisterUser = async (
   );
 
   if (userExists) {
-    res.status(400).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message: "El email proporcionado ya ha sido registrado.",
     });
     return;
   } else if (!EmailValidator.validate(email)) {
-    res.status(400).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message: "El email proporcionado no es válido.",
@@ -58,7 +58,7 @@ export const RegisterUser = async (
       .lowercase()
       .validate(password) === false
   ) {
-    res.status(400).json({
+    res.status(200).json({
       status: "error",
       success: false,
       message:
@@ -83,15 +83,12 @@ export const RegisterUser = async (
       password: "",
     };
 
-    res
-      .status(201)
-      .json({
-        status: "success",
-        success: true,
-        message: "Usuario creado exitosamente.",
-        data: user,
-      })
-      .redirect("/login");
+    res.status(200).json({
+      status: "success",
+      success: true,
+      message: "Usuario creado exitosamente.",
+      data: user,
+    });
   } catch (error: unknown) {
     if (error instanceof Error) {
       res.status(500).json({
